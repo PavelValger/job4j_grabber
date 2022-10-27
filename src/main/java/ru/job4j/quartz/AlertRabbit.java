@@ -12,27 +12,26 @@ import static org.quartz.TriggerBuilder.*;
 import static org.quartz.SimpleScheduleBuilder.*;
 
 public class AlertRabbit {
-    private static final Properties PROPERTIES = new Properties();
-
-    private void classLoader() {
+    private static Properties load() {
+        Properties properties = new Properties();
         try (InputStream in = AlertRabbit.class.getClassLoader()
                 .getResourceAsStream("rabbit.properties")) {
-            PROPERTIES.load(in);
+            properties.load(in);
         } catch (IOException e) {
             e.printStackTrace();
         }
+        return properties;
     }
 
     public static void main(String[] args) {
-        AlertRabbit alertRabbit = new AlertRabbit();
-        alertRabbit.classLoader();
+        var properties = load();
         try {
             Scheduler scheduler = StdSchedulerFactory.getDefaultScheduler();
             scheduler.start();
             JobDetail job = newJob(Rabbit.class).build();
             SimpleScheduleBuilder times = simpleSchedule()
                     .withIntervalInSeconds(
-                            Integer.parseInt(PROPERTIES.getProperty("rabbit.interval")))
+                            Integer.parseInt(properties.getProperty("rabbit.interval")))
                     .repeatForever();
             Trigger trigger = newTrigger()
                     .startNow()
