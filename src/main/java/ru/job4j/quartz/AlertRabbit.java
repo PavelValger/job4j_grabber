@@ -7,8 +7,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.sql.*;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Properties;
 
 import static org.quartz.JobBuilder.*;
@@ -39,11 +37,9 @@ public class AlertRabbit {
     public static void main(String[] args) {
         var properties = load();
         try (var connection = getConnection(properties)) {
-            List<Long> store = new ArrayList<>();
             Scheduler scheduler = StdSchedulerFactory.getDefaultScheduler();
             scheduler.start();
             JobDataMap data = new JobDataMap();
-            data.put("store", store);
             data.put("connection", connection);
             JobDetail job = newJob(Rabbit.class)
                     .usingJobData(data)
@@ -59,7 +55,6 @@ public class AlertRabbit {
             scheduler.scheduleJob(job, trigger);
             Thread.sleep(10000);
             scheduler.shutdown();
-            System.out.println(store);
         } catch (SchedulerException | ClassNotFoundException
                 | SQLException | InterruptedException se) {
             se.printStackTrace();
@@ -77,11 +72,6 @@ public class AlertRabbit {
             System.out.println("Rabbit runs here ...");
             long millis = System.currentTimeMillis();
             LocalDateTime localDateTime = new Timestamp(millis).toLocalDateTime();
-            List<Long> store = (List<Long>) context
-                    .getJobDetail()
-                    .getJobDataMap()
-                    .get("store");
-            store.add(millis);
             Connection connection = (Connection) context
                     .getJobDetail()
                     .getJobDataMap()
