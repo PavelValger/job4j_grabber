@@ -5,6 +5,10 @@ import org.quartz.impl.StdSchedulerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.sql.*;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
 
 import static org.quartz.JobBuilder.*;
@@ -23,12 +27,27 @@ public class AlertRabbit {
         return properties;
     }
 
+    private static Connection getConnection(Properties properties)
+            throws ClassNotFoundException, SQLException {
+        Class.forName(properties.getProperty("hibernate.connection.driver_class"));
+        String url = properties.getProperty("hibernate.connection.url");
+        String login = properties.getProperty("hibernate.connection.username");
+        String password = properties.getProperty("hibernate.connection.password");
+        return DriverManager.getConnection(url, login, password);
+    }
+
     public static void main(String[] args) {
         var properties = load();
-        try {
+        try (var connection = getConnection(properties)) {
+            List<Long> store = new ArrayList<>();
             Scheduler scheduler = StdSchedulerFactory.getDefaultScheduler();
             scheduler.start();
-            JobDetail job = newJob(Rabbit.class).build();
+            JobDataMap data = new JobDataMap();
+            data.put("store", store);
+            data.put("connection", connection);
+            JobDetail job = newJob(Rabbit.class)
+                    .usingJobData(data)
+                    .build();
             SimpleScheduleBuilder times = simpleSchedule()
                     .withIntervalInSeconds(
                             Integer.parseInt(properties.getProperty("rabbit.interval")))
@@ -38,15 +57,44 @@ public class AlertRabbit {
                     .withSchedule(times)
                     .build();
             scheduler.scheduleJob(job, trigger);
-        } catch (SchedulerException se) {
+            Thread.sleep(10000);
+            scheduler.shutdown();
+            System.out.println(store);
+        } catch (SchedulerException | ClassNotFoundException
+                | SQLException | InterruptedException se) {
             se.printStackTrace();
         }
     }
 
     public static class Rabbit implements Job {
+
+        public Rabbit() {
+            System.out.println(hashCode());
+        }
+
         @Override
         public void execute(JobExecutionContext context) {
             System.out.println("Rabbit runs here ...");
+            long millis = System.currentTimeMillis();
+            LocalDateTime localDateTime = new Timestamp(millis).toLocalDateTime();
+            List<Long> store = (List<Long>) context
+                    .getJobDetail()
+                    .getJobDataMap()
+                    .get("store");
+            store.add(millis);
+            Connection connection = (Connection) context
+                    .getJobDetail()
+                    .getJobDataMap()
+                    .get("connection");
+            try (PreparedStatement statement =
+                         connection.prepareStatement(
+                                 "insert into rabbit(created_date) values (?)")) {
+                statement.setTimestamp(1,
+                        Timestamp.valueOf(localDateTime));
+                statement.execute();
+            } catch (SQLException throwables) {
+                throwables.printStackTrace();
+            }
         }
     }
 }
