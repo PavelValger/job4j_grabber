@@ -14,11 +14,11 @@ public class HabrCareerParse {
     private static final String SOURCE_LINK = "https://career.habr.com";
     private static final String PAGE_LINK = String
             .format("%s/vacancies/java_developer", SOURCE_LINK);
+    private static final int PAGE_MAX = 5;
 
     public static void main(String[] args) throws IOException {
-        int pageMax = 5;
         String list = String.format("%s?page=", PAGE_LINK);
-        for (int number = 1; number <= pageMax; number++) {
+        for (int number = 1; number <= PAGE_MAX; number++) {
             String page = String.format("%s%d", list, number);
             Connection connection = Jsoup.connect(page);
             Document document = connection.get();
