@@ -16,17 +16,12 @@ public class HabrCareerParse {
             .format("%s/vacancies/java_developer", SOURCE_LINK);
 
     public static void main(String[] args) throws IOException {
-        Connection connection = Jsoup.connect(PAGE_LINK);
-        Document document = connection.get();
-        int pageLength = PAGE_LINK.length();
-        Elements pages = document.select("a.page");
-        for (Element page : pages) {
-            String nextPage = String
-                    .format("%s%s", SOURCE_LINK, page.attr("href"));
-            if (pageLength != nextPage.length()) {
-                connection = Jsoup.connect(nextPage);
-                document = connection.get();
-            }
+        int pageMax = 5;
+        String list = String.format("%s?page=", PAGE_LINK);
+        for (int number = 1; number <= pageMax; number++) {
+            String page = String.format("%s%d", list, number);
+            Connection connection = Jsoup.connect(page);
+            Document document = connection.get();
             Elements rows = document.select(".vacancy-card__inner");
             rows.forEach(row -> {
                 Element titleElement = row.select(".vacancy-card__title").first();
