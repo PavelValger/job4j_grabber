@@ -16,25 +16,26 @@ public class HabrCareerParse {
             .format("%s/vacancies/java_developer", SOURCE_LINK);
     private static final int PAGE_MAX = 5;
 
-    private static String retrieveDescription(String link) {
-        String description = null;
+    private static Document getDoc(String link) {
+        Document doc = null;
         try {
             Connection connection = Jsoup.connect(link);
-            Document document = connection.get();
-            description = document.select(".style-ugc").text();
+            doc = connection.get();
         } catch (IOException e) {
             e.printStackTrace();
         }
-        return description;
+        return doc;
     }
 
-    public static void main(String[] args) throws IOException {
+    private static String retrieveDescription(String link) {
+        return getDoc(link).select(".style-ugc").text();
+    }
+
+    public static void main(String[] args) {
         String list = String.format("%s?page=", PAGE_LINK);
         for (int number = 1; number <= PAGE_MAX; number++) {
             String page = String.format("%s%d", list, number);
-            Connection connection = Jsoup.connect(page);
-            Document document = connection.get();
-            Elements rows = document.select(".vacancy-card__inner");
+            Elements rows = getDoc(page).select(".vacancy-card__inner");
             rows.forEach(row -> {
                 Element titleElement = row.select(".vacancy-card__title").first();
                 Element linkElement = titleElement.child(0);
