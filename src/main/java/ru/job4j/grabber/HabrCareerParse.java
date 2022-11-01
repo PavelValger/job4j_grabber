@@ -50,7 +50,7 @@ public class HabrCareerParse implements Parse {
                 Element linkElement = titleElement.child(0);
                 String vacancyName = titleElement.text();
                 String vacancyDate = row.select(".basic-date").first().attr("datetime");
-                LocalDateTime localDateTime = new HabrCareerDateTimeParser().parse(vacancyDate);
+                LocalDateTime localDateTime = dateTimeParser.parse(vacancyDate);
                 String subLink = String.format("%s%s", SOURCE_LINK, linkElement.attr("href"));
                 String description = retrieveDescription(subLink);
                 Post post = new Post(vacancyName, subLink, description, localDateTime);
@@ -63,6 +63,7 @@ public class HabrCareerParse implements Parse {
     public static void main(String[] args) {
         HabrCareerParse habrCareerParse = new HabrCareerParse(new HabrCareerDateTimeParser());
         List<Post> list = habrCareerParse.list(String.format("%s?page=", PAGE_LINK));
+        System.out.println(habrCareerParse.getDateTimeParser());
         System.out.println(list.get(24));
         System.out.println(list.get(24).getDescription());
     }
