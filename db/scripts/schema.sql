@@ -16,3 +16,11 @@ create table rabbit(
       id serial primary key,
       created_date TIMESTAMP
 );
+
+create table post(
+	id serial primary key,
+	name TEXT,
+	text TEXT,
+	link TEXT UNIQUE,
+	created TIMESTAMP
+);
