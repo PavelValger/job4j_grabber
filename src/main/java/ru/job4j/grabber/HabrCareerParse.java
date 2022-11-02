@@ -17,7 +17,7 @@ public class HabrCareerParse implements Parse {
     private static final String SOURCE_LINK = "https://career.habr.com";
     private static final String PAGE_LINK = String
             .format("%s/vacancies/java_developer", SOURCE_LINK);
-    private static final int PAGE_MAX = 5;
+    private static final int PAGE_MAX = 1;
     private final DateTimeParser dateTimeParser;
 
     public HabrCareerParse(DateTimeParser dateTimeParser) {
@@ -39,23 +39,24 @@ public class HabrCareerParse implements Parse {
         return getDoc(link).selectFirst(".style-ugc").text();
     }
 
+    private Post post(Element element) {
+        Element titleElement = element.select(".vacancy-card__title").first();
+        Element linkElement = titleElement.child(0);
+        String vacancyName = titleElement.text();
+        String vacancyDate = element.select(".basic-date").first().attr("datetime");
+        LocalDateTime localDateTime = dateTimeParser.parse(vacancyDate);
+        String subLink = String.format("%s%s", SOURCE_LINK, linkElement.attr("href"));
+        String description = retrieveDescription(subLink);
+        return new Post(vacancyName, subLink, description, localDateTime);
+    }
+
     @Override
     public List<Post> list(String link) {
         List<Post> list = new ArrayList<>();
         for (int number = 1; number <= PAGE_MAX; number++) {
             String page = String.format("%s%d", link, number);
             Elements rows = getDoc(page).select(".vacancy-card__inner");
-            rows.forEach(row -> {
-                Element titleElement = row.select(".vacancy-card__title").first();
-                Element linkElement = titleElement.child(0);
-                String vacancyName = titleElement.text();
-                String vacancyDate = row.select(".basic-date").first().attr("datetime");
-                LocalDateTime localDateTime = dateTimeParser.parse(vacancyDate);
-                String subLink = String.format("%s%s", SOURCE_LINK, linkElement.attr("href"));
-                String description = retrieveDescription(subLink);
-                Post post = new Post(vacancyName, subLink, description, localDateTime);
-                list.add(post);
-            });
+            rows.forEach(row -> list.add(post(row)));
         }
         return list;
     }
