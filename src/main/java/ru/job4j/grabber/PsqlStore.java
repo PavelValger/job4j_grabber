@@ -100,12 +100,15 @@ public class PsqlStore implements Store, AutoCloseable {
         HabrCareerParse habrCareerParse = new HabrCareerParse(new HabrCareerDateTimeParser());
         List<Post> list = habrCareerParse
                 .list("https://career.habr.com/vacancies/java_developer?page=");
-        PsqlStore psqlStore = new PsqlStore(new PostClassLoader().getProperties());
-        list.forEach(psqlStore::save);
-        System.out.println("Проверка обновления id в list:");
-        list.forEach(System.out::println);
-        System.out.println("Получение данных из БД:");
-        psqlStore.getAll().forEach(System.out::println);
-        System.out.printf("Поиск по id: %s%n", psqlStore.findById(20));
+        try (PsqlStore psqlStore = new PsqlStore(new PostClassLoader().getProperties())) {
+            list.forEach(psqlStore::save);
+            System.out.println("Проверка обновления id в list:");
+            list.forEach(System.out::println);
+            System.out.println("Получение данных из БД:");
+            psqlStore.getAll().forEach(System.out::println);
+            System.out.printf("Поиск по id: %s%n", psqlStore.findById(20));
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
+        }
     }
 }
