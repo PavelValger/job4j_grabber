@@ -27,6 +27,19 @@ public class Grabber implements Grab {
         System.out.printf("Parsing %s is over...\n", subLink);
     }
 
+    private JobDetail newWork(Class<? extends org.quartz.Job> jobClass, JobDataMap data) {
+        return newJob(jobClass)
+                .usingJobData(data)
+                .build();
+    }
+
+    private Trigger newTrig(SimpleScheduleBuilder times) {
+        return newTrigger()
+                .startNow()
+                .withSchedule(times)
+                .build();
+    }
+
     public Store store() {
         return new PsqlStore(cfg);
     }
@@ -42,19 +55,6 @@ public class Grabber implements Grab {
                 .getResourceAsStream("app.properties")) {
             cfg.load(in);
         }
-    }
-
-    private JobDetail newWork(Class<? extends org.quartz.Job> jobClass, JobDataMap data) {
-        return newJob(jobClass)
-                .usingJobData(data)
-                .build();
-    }
-
-    private Trigger newTrig(SimpleScheduleBuilder times) {
-        return newTrigger()
-                .startNow()
-                .withSchedule(times)
-                .build();
     }
 
     @Override
