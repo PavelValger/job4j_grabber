@@ -15,17 +15,22 @@ import static org.quartz.SimpleScheduleBuilder.simpleSchedule;
 import static org.quartz.TriggerBuilder.newTrigger;
 
 public class Grabber implements Grab {
-    private static final String SOURCE_LINK = "https://career.habr.com/vacancies";
-    private static final String JAVA_LINK = String
-            .format("%s/java_developer", SOURCE_LINK);
-    private static final String PYTHON_LINK = String
-            .format("%s/programmist_python", SOURCE_LINK);
+    private static final String SOURCE_LINK
+            = "https://career.habr.com/vacancies";
+    private static final String JAVA_LINK
+            = "https://career.habr.com/vacancies/java_developer?page=";
+    private static final String PYTHON_LINK
+            = "https://career.habr.com/vacancies/programmist_python?page=";
+    private static final String JAVA_LITERAL
+            = String.format("\"%s/java_developer\"", SOURCE_LINK);
+    private static final String PYTHON_LITERAL
+            = String.format("\"%s/programmist_python\"", SOURCE_LINK);
+
     private final Properties cfg = new Properties();
 
-    private static void context(JobExecutionContext context, String link) {
-        String subLink = String.format("Site parsing %s", link);
+    private static void context(JobExecutionContext context, String link, String literal) {
+        String subLink = String.format("Site parsing %s", literal);
         System.out.println(subLink);
-        link = String.format("%s?page=", link);
         JobDataMap map = context
                 .getJobDetail()
                 .getJobDataMap();
@@ -95,30 +100,30 @@ public class Grabber implements Grab {
         JobDataMap data = new JobDataMap();
         data.put("store", store);
         data.put("parse", parse);
-        JobDetail job = newWork(GrabJob.class, data);
-        JobDetail work = newWork(WorkJob.class, data);
+        JobDetail jobJava = newWork(JavaJob.class, data);
+        JobDetail jobPython = newWork(PythonJob.class, data);
         SimpleScheduleBuilder times = simpleSchedule()
                 .withIntervalInSeconds(Integer.parseInt(cfg.getProperty("time")))
                 .repeatForever();
         Trigger triggerJob = newTrig(times);
         Trigger triggerWork = newTrig(times);
-        scheduler.scheduleJob(job, triggerJob);
-        scheduler.scheduleJob(work, triggerWork);
+        scheduler.scheduleJob(jobJava, triggerJob);
+        scheduler.scheduleJob(jobPython, triggerWork);
     }
 
-    public static class GrabJob implements Job {
+    public static class JavaJob implements Job {
 
         @Override
         public void execute(JobExecutionContext context) {
-            context(context, JAVA_LINK);
+            context(context, JAVA_LINK, JAVA_LITERAL);
         }
     }
 
-    public static class WorkJob implements Job {
+    public static class PythonJob implements Job {
 
         @Override
         public void execute(JobExecutionContext context) {
-            context(context, PYTHON_LINK);
+            context(context, PYTHON_LINK, PYTHON_LITERAL);
         }
     }
 
