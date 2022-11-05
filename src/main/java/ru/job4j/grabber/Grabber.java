@@ -5,6 +5,8 @@ import org.quartz.impl.StdSchedulerFactory;
 import ru.job4j.grabber.utils.HabrCareerDateTimeParser;
 
 import java.io.*;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.util.List;
 import java.util.Properties;
 
@@ -13,10 +15,17 @@ import static org.quartz.SimpleScheduleBuilder.simpleSchedule;
 import static org.quartz.TriggerBuilder.newTrigger;
 
 public class Grabber implements Grab {
+    private static final String SOURCE_LINK = "https://career.habr.com/vacancies";
+    private static final String JAVA_LINK = String
+            .format("%s/java_developer", SOURCE_LINK);
+    private static final String PYTHON_LINK = String
+            .format("%s/programmist_python", SOURCE_LINK);
     private final Properties cfg = new Properties();
 
-    private static void context(JobExecutionContext context, String link, String subLink) {
+    private static void context(JobExecutionContext context, String link) {
+        String subLink = String.format("Site parsing %s", link);
         System.out.println(subLink);
+        link = String.format("%s?page=", link);
         JobDataMap map = context
                 .getJobDetail()
                 .getJobDataMap();
@@ -50,11 +59,35 @@ public class Grabber implements Grab {
         return scheduler;
     }
 
-    public void cfg() throws IOException {
+    public void cfg() {
         try (InputStream in = Grabber.class.getClassLoader()
                 .getResourceAsStream("app.properties")) {
             cfg.load(in);
+        } catch (IOException io) {
+            throw new IllegalArgumentException(io);
         }
+    }
+
+    public void web(Store store) {
+        new Thread(() -> {
+            try (ServerSocket server = new ServerSocket(
+                    Integer.parseInt(cfg.getProperty("port")))) {
+                while (!server.isClosed()) {
+                    Socket socket = server.accept();
+                    try (OutputStream out = socket.getOutputStream()) {
+                        out.write("HTTP/1.1 200 OK\r\n\r\n".getBytes());
+                        for (Post post : store.getAll()) {
+                            out.write(post.toString().getBytes());
+                            out.write(System.lineSeparator().getBytes());
+                        }
+                    } catch (IOException io) {
+                        io.printStackTrace();
+                    }
+                }
+            } catch (IOException io) {
+                io.printStackTrace();
+            }
+        }).start();
     }
 
     @Override
@@ -77,9 +110,7 @@ public class Grabber implements Grab {
 
         @Override
         public void execute(JobExecutionContext context) {
-            String link = "https://career.habr.com/vacancies/java_developer?page=";
-            var subLink = String.format("Site parsing %s", link.substring(0, 48));
-            context(context, link, subLink);
+            context(context, JAVA_LINK);
         }
     }
 
@@ -87,17 +118,16 @@ public class Grabber implements Grab {
 
         @Override
         public void execute(JobExecutionContext context) {
-            String link = "https://career.habr.com/vacancies/programmist_python?page=";
-            var subLink = String.format("Site parsing %s", link.substring(0, 52));
-            context(context, link, subLink);
+            context(context, PYTHON_LINK);
         }
     }
 
-    public static void main(String[] args) throws SchedulerException, IOException {
+    public static void main(String[] args) throws SchedulerException {
         Grabber grab = new Grabber();
         grab.cfg();
         Scheduler scheduler = grab.scheduler();
         Store store = grab.store();
         grab.init(new HabrCareerParse(new HabrCareerDateTimeParser()), store, scheduler);
+        grab.web(store);
     }
 }
